@@ -1,13 +1,15 @@
 #include<stdio.h>
 #include<stdlib.h>
+#include<string.h>
 #include<pcap.h>
+#include"config.h"
 #include "./structure.h"
 
 typedef unsigned char u_char;
 
 void got_packet(u_char*,const struct pcap_pkthdr *,const u_char*);
 
-void logger(const struct sniff_ip *,const struct pcap_pkthdr *, FILE *);
+// void logger(const struct sniff_ip *,const struct pcap_pkthdr *, FILE *);
 
 
 
@@ -108,6 +110,15 @@ int main(){
 
 void got_packet(u_char *args,const struct pcap_pkthdr *header,const u_char *packet){
     // triggers call back when packet is recieved by interface
+    static int counter=0; // counter that is persistant throughout whole program rather than automatic storage allocation. Stored in static memory segment
+    char source_buffer[100]; // source ip buffer
+    char destination_buffer[100]; // destination ip buffer
+
+    FILE *file_handler = (FILE *) args; // typecasts u_char pointer to FILE pointer
+    
+    if(counter==0) fprintf(file_handler,"%s | %s | %s | %s | %s | %s",
+    "Timestamp","Source IP","Destination IP","Source Port","Destination Port","Protocol\n");
+
     const struct sniff_ethernet *ethernet; // define ethernet pointer
     const struct sniff_ip *ip; // define ip pointer
     const struct sniff_tcp *tcp; // define tcp pointer
@@ -116,7 +127,6 @@ void got_packet(u_char *args,const struct pcap_pkthdr *header,const u_char *pack
     __u_int size_tcp; // define size tcp header
     char srcip[100]; // define src ip buffer
 
-    FILE *file_handler = (FILE *) args; 
 
     ethernet = (struct sniff_ethernet*) packet; // ethernet header pointer
 
@@ -124,16 +134,16 @@ void got_packet(u_char *args,const struct pcap_pkthdr *header,const u_char *pack
 
     size_ip = IP_HL(ip)*4;
 
-    // if(size_ip>20){
-    //     printf("Ip header is too small\n");
-    //     return;
-    // }
+    if(size_ip<20){
+        printf("Ip header is too small\n");
+        return;
+    }
 
     tcp = (struct sniff_tcp*) (packet+ETHER_ADDR_LEN+size_ip);
 
     size_tcp = TH_OFF(tcp)*4;
 
-    if(size_tcp>20){
+    if(size_tcp<20){
         printf("TCP IS VALID\n");
         return;
     }
@@ -143,12 +153,35 @@ void got_packet(u_char *args,const struct pcap_pkthdr *header,const u_char *pack
     printf("Source address is %s\n",inet_ntoa(ip->ip_src));
     printf("Destination address is %s\n",inet_ntoa(ip->ip_dst));
 
-    logger(ip,header,file_handler);
+    strcpy(source_buffer,inet_ntoa(ip->ip_src));
+    strcpy(destination_buffer,inet_ntoa(ip->ip_dst));
+
+    struct PacketData *pd; // declare packet data struct pointer (stores memory address of a struct PacketData)
+
+    pd = (struct PacketData*) malloc(sizeof(struct PacketData)); // assign pointer, returns void pointer (memory address to to no specific datatype) and typecasted to struct PacketData pointer (stores memory address of struct PacketData)
+
+    pd->source_ip= source_buffer;
+    pd->destination_ip= destination_buffer;
+    pd->source_port= tcp->th_sport;
+    pd->destination_port= tcp->th_dport;
+    pd->offWireLength=header->len;
+    pd->ts=header->ts;
+
+    logger(file_handler,pd);
+
+    free(pd);
+
+    // logger(ip,header,file_handler);
+
+    counter++; // increments counter
 
 
     // printf("Header length is %d\n",header->len);
 }
 
-void logger(const struct sniff_ip *ip,const struct pcap_pkthdr *header, FILE *fp){
-    fprintf(fp,"\n%lu  %d  %s  %s\n",header->ts.tv_sec,header->len,inet_ntoa(ip->ip_src),inet_ntoa(ip->ip_dst));
-}
+// void logger(const struct sniff_ip *ip,const struct pcap_pkthdr *header, FILE *fp){
+//     printf("Logged\n");
+//     fprintf(fp,"\n%lu  %d  %s  %s\n",header->ts.tv_sec,header->len,inet_ntoa(ip->ip_src),inet_ntoa(ip->ip_dst));
+// }
+
+// Timestamp|Source IP | Destination IP | Source Port | Destination Port | Protocol | packet size

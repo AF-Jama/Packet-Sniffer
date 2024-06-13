@@ -1,0 +1,4 @@
+Goal is to sniff incoming packets on wireless interface and log incoming packets within a file in the following format
+
+
+timestamp | source ip | destination ip | source port | destination port | size (bytes)    

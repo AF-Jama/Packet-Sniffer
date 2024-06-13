@@ -1,7 +1,13 @@
-# idea file
+# .gitignore file removes files from version control
 
-idea.txt 
+# config object file
+config.o
+
+# main object file
+main.o
+
+.vscode
 
 # logs file
-
 logs.txt
+
