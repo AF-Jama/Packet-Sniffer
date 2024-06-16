@@ -27,6 +27,8 @@ struct PacketData{
 
 void logger(FILE *,struct PacketData*);
 
+char *userPrompt();
+
 
 
 

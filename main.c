@@ -22,7 +22,7 @@ int main(){
     int timeout = 1000; // initialising  timeout
     int compile; // define compile 
     struct bpf_program fp; // define compiled filter expression
-    char *filter_rule = "port 443"; // filter rule 
+    char *filter_rule; // define filter rule char pointer (memory address of char) 
     bpf_u_int32 net; // define netmask
     bpf_u_int32 mask; // define mask
     int filter;
@@ -41,6 +41,15 @@ int main(){
     }
 
     printf("File %s has been opened\n",file);
+
+    filter_rule = userPrompt();
+
+    if(filter_rule==NULL){
+        printf("Invalid filter rule.\n");
+        return 1;
+    }
+
+    // printf("Filter rule is %s\n",filter_rule);
 
     mode = 0; // assigning sniffing mode
 
@@ -144,9 +153,11 @@ void got_packet(u_char *args,const struct pcap_pkthdr *header,const u_char *pack
     size_tcp = TH_OFF(tcp)*4;
 
     if(size_tcp<20){
-        printf("TCP IS VALID\n");
+        // printf("TCP IS VALID\n");
         return;
     }
+
+    printf("Valid packet sniffed\n");
 
     payload = (const char*) (packet+ETHER_ADDR_LEN+size_ip+size_tcp);
 
